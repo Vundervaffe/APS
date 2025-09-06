@@ -1,0 +1,34 @@
+#-----------------------------------------------------------
+# Vivado v2019.2 (64-bit)
+# SW Build 2708876 on Wed Nov  6 21:39:14 MST 2019
+# IP Build 2700528 on Thu Nov  7 00:09:20 MST 2019
+# Start of session at: Sat Sep  6 17:36:48 2025
+# Process ID: 70760
+# Current directory: /home/Dima_Kr/APS
+# Command line: vivado
+# Log file: /home/Dima_Kr/APS/vivado.log
+# Journal file: /home/Dima_Kr/APS/vivado.jou
+#-----------------------------------------------------------
+start_gui
+open_project /home/Dima_Kr/adder/adder.xpr
+update_compile_order -fileset sources_1
+synth_design -rtl -name rtl_1
+launch_runs synth_1 -jobs 48
+wait_on_run synth_1
+open_run synth_1 -name synth_1
+close_design
+close_design
+file mkdir /home/Dima_Kr/adder/adder.srcs/constrs_1
+close [ open /home/Dima_Kr/APS/1_adder/xdc/constrain.xdc w ]
+add_files -fileset constrs_1 /home/Dima_Kr/APS/1_adder/xdc/constrain.xdc
+close [ open /home/Dima_Kr/APS/1_adder/rtl/wrapper.sv w ]
+add_files /home/Dima_Kr/APS/1_adder/rtl/wrapper.sv
+update_compile_order -fileset sources_1
+update_compile_order -fileset sources_1
+reset_run synth_1
+import_files /home/Dima_Kr/APS/1_adder/rtl/wrapper.sv
+export_ip_user_files -of_objects  [get_files /home/Dima_Kr/adder/adder.srcs/sources_1/new/CLA.sv] -no_script -reset -force -quiet
+remove_files  /home/Dima_Kr/adder/adder.srcs/sources_1/new/CLA.sv
+launch_runs impl_1 -jobs 48
+wait_on_run impl_1
+open_run impl_1
