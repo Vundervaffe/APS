@@ -31,32 +31,14 @@ module adder_32#(
     output logic             carry_o 
     );
     
-    logic [WIDTH-1:0] G;
-    logic [WIDTH-1:0] P;
-    logic [WIDTH  :0] carries;
+    logic [WIDTH/4-1:0] carries;
     
-    generate
-        for(genvar i = 0; i < WIDTH; i++) begin : adder_chain
-            adder bit_adder(
-                .a_i    (a_i[i]    ),
-                .b_i    (b_i[i]    ),
-                .carry_i(carries[i]),
-                
-                .sum_o  (sum_o[i]  ),
-                .carry_o(          ),
-                .G_o    (G[i]      ),
-                .P_o    (P[i]      )
-            );
-        end 
-    endgenerate
-    
-    CLU#(
-        .WIDTH(WIDTH)
-    ) clu(
-        .G_i    (G      ),
-        .P_i    (P      ),
-        .carry_i(carry_i),
+    adder_4 add[7:0](
+        .a_i    (a_i    ),
+        .b_i    (b_i    ),
+        .carry_i({carries[WIDTH/4-1-1:0], carry_i}),
+        .sum_o  (sum_o),
         .carry_o(carries)
     );
-    assign carry_o = carries[WIDTH];
+    assign carry_o = carries[WIDTH/4-1];
 endmodule

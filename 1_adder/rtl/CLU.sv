@@ -20,18 +20,14 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module CLU#(
-    parameter WIDTH = 16
-)(
-    input  logic [WIDTH -1:0] G_i,
-    input  logic [WIDTH -1:0] P_i,
-    input  logic              carry_i,
-    output logic [WIDTH   :0] carry_o
+module CLU(
+    input  logic [3:0] G_i,
+    input  logic [3:0] P_i,
+    input  logic       carry_i,
+    output logic [3:0] carry_o
     );
-    assign carry_o[0] = carry_i;
-    generate
-        for (genvar i = 0; i < WIDTH; i++) begin : carry_gen
-            assign carry_o[i+1] = G_i[i] | (P_i[i] & carry_o[i]);
-        end
-    endgenerate 
+    assign carry_o[0] = G_i[0] | (P_i[0] & carry_i);
+    assign carry_o[1] = G_i[1] | (G_i[0] & P_i[1] ) | (carry_i & P_i[0] & P_i[1]);
+    assign carry_o[2] = G_i[2] | (G_i[1] & P_i[2] ) | (G_i[0]  & P_i[1] & P_i[2]) | (carry_i & P_i[0] & P_i[1] & P_i[2]);
+    assign carry_o[3] = G_i[3] | (G_i[2] & P_i[3] ) | (G_i[1]  & P_i[2] & P_i[3]) | (G_i[0]  & P_i[1] & P_i[2] & P_i[3]) | (carry_i & P_i[0] & P_i[1] & P_i[2] & P_i[3]);
 endmodule
