@@ -32,7 +32,9 @@ module lab_07_tb_processor_system();
         $display("You're trying to run simulation that has finished. Aborting simulation.");
       $fatal();
   end
-
+  initial begin
+    DUT.Data_Memory.data[0] <= 16'h04_08;
+  end
 stall_seq: assert property (
     @(posedge DUT.core.clk_i) disable iff ( DUT.core.rst_i )
     DUT.core.mem_req_o |-> (DUT.core.stall_i || $past(DUT.core.stall_i))
