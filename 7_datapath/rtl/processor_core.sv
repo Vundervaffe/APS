@@ -78,6 +78,10 @@ module processor_core (
   assign write_data   = (wb_sel)? mem_rd_i : result;
 
   //PC Realisation
+  logic [12:0] imm_b;
+  assign imm_b = {instr_i[31], instr_i[7], instr_i[30:25], instr_i[11:8], 1'b0};
+  logic [20:0] imm_j;
+  assign imm_j = {instr_i[31], instr_i[19:12], instr_i[20], instr_i[30:21], 1'b0};
   always_ff @(posedge clk_i or posedge rst_i) begin
     if(rst_i) begin
       PC <= 0;
@@ -90,8 +94,7 @@ module processor_core (
               PC <= PC + 4;
             end
             1: begin
-              PC <= PC + (branch)? $signed({instr_i[31], instr_i[7], instr_i[30:25], instr_i[11:8], 1'b0}) :
-                                   $signed({instr_i[31], instr_i[19:12], instr_i[20], instr_i[30:21], 1'b0});
+              PC <= PC + ((branch)? $signed(imm_b) : $signed(imm_j));
             end
           endcase
         end

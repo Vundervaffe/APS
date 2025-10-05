@@ -29,7 +29,7 @@ module processor_system(
   logic [31:0] instr_addr;
   
   //Core
-  logic         mem_rd;
+  logic [31: 0]mem_rd;
   logic         mem_req;
   logic         mem_we;
   logic [ 2: 0] mem_size;
@@ -46,6 +46,16 @@ module processor_system(
       stall <= (!stall & mem_req);
     end
   end 
+
+  //walid data
+  logic [3:0] bytes;
+  always_comb begin
+    case(mem_size)
+      2: bytes = 4'b1111;
+      1: bytes = 4'b0011;
+      0: bytes = 4'b0001;
+    endcase
+  end
 
   instr_mem Instruction_Memory(
     .read_addr_i(instr_addr),
@@ -69,13 +79,13 @@ module processor_system(
   );
 
   data_mem Data_Memory(
-    .clk_i(clk_i),
-    .mem_req_i(mem_req),
-    .write_enable_i(mem_we),
-    .byte_enable_i(4'b1111),
-    .addr_i(mem_addr),
-    .write_data_i(mem_wd),
-    .read_data_o(mem_rd),
-    .ready_o()
+    .clk_i         (clk_i   ),
+    .mem_req_i     (mem_req ),
+    .write_enable_i(mem_we  ),
+    .byte_enable_i (bytes   ),
+    .addr_i        (mem_addr),
+    .write_data_i  (mem_wd  ),
+    .read_data_o   (mem_rd  ),
+    .ready_o       (        )
   );
 endmodule
