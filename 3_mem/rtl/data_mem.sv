@@ -34,18 +34,21 @@ import memory_pkg::DATA_MEM_SIZE_WORDS;
   output logic        ready_o
 );
   logic [31:0] data [DATA_MEM_SIZE_WORDS];
-  
+  logic [31:0] write_data;
+  always_comb begin
+    if (byte_enable_i[0])
+      write_data[ 7: 0] = write_data_i[ 7: 0];
+    if (byte_enable_i[1])
+      write_data[15: 8] = write_data_i[15: 8];
+    if (byte_enable_i[2])
+      write_data[23:16] = write_data_i[23:16];
+    if (byte_enable_i[3])
+      write_data[31:24] = write_data_i[31:24];
+  end
   always_ff @(posedge clk_i) begin
     if (mem_req_i) begin
       if (write_enable_i) begin
-        if (byte_enable_i[0])
-          data[addr_i][ 7: 0] <= write_data_i[ 7: 0];
-        if (byte_enable_i[1])
-          data[addr_i][15: 8] <= write_data_i[15: 8];
-        if (byte_enable_i[2])
-          data[addr_i][23:16] <= write_data_i[23:16];
-        if (byte_enable_i[3])
-          data[addr_i][31:24] <= write_data_i[31:24];
+        data[addr_i] <= write_data;
       end
       else begin
         read_data_o <= data[addr_i];
