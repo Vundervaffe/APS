@@ -22,7 +22,27 @@
 
 module processor_system(
   input  logic        clk_i,
-  input  logic        rst_i
+  input  logic        resetn_i,
+
+  // Входы и выходы периферии
+  input  logic [15:0] sw_i,       // Переключатели
+
+  output logic [15:0] led_o,      // Светодиоды
+
+  input  logic        kclk_i,     // Тактирующий сигнал клавиатуры
+  input  logic        kdata_i,    // Сигнал данных клавиатуры
+
+  output logic [ 6:0] hex_led_o,  // Вывод семисегментных индикаторов
+  output logic [ 7:0] hex_sel_o,  // Селектор семисегментных индикаторов
+
+  input  logic        rx_i,       // Линия приёма по UART
+  output logic        tx_o,       // Линия передачи по UART
+
+  output logic [3:0]  vga_r_o,    // Красный канал vga
+  output logic [3:0]  vga_g_o,    // Зелёный канал vga
+  output logic [3:0]  vga_b_o,    // Синий канал vga
+  output logic        vga_hs_o,   // Линия горизонтальной синхронизации vga
+  output logic        vga_vs_o    // Линия вертикальной синхронизации vga
 );
   //Instruction Memory
   logic [31:0] instr;
@@ -39,6 +59,8 @@ module processor_system(
   logic [ 2: 0] core_size;
   logic [31: 0] core_wd;
   logic [31: 0] core_addr;
+  logic irq_req;
+  logic irq_ret;
 
   //Data mem
   logic [31: 0] mem_rd;
@@ -60,13 +82,15 @@ module processor_system(
     .stall_i     (stall     ),
     .instr_i     (instr     ),
     .mem_rd_i    (core_rd   ),
+    .irq_req_i   (irq_req   ),
 
     .instr_addr_o(instr_addr),
     .mem_addr_o  (core_addr ),
     .mem_size_o  (core_size ),
     .mem_req_o   (core_req  ),
     .mem_we_o    (core_we   ),
-    .mem_wd_o    (core_wd   )
+    .mem_wd_o    (core_wd   ),
+    .irq_ret_o   (irq_ret   )
   );
 
   lsu LSU(

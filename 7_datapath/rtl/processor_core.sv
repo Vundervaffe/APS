@@ -27,14 +27,17 @@ module processor_core (
   input  logic        stall_i,
   input  logic [31:0] instr_i,
   input  logic [31:0] mem_rd_i,
+  input  logic        irq_req_i,
 
   output logic [31:0] instr_addr_o,
   output logic [31:0] mem_addr_o,
   output logic [ 2:0] mem_size_o,
   output logic        mem_req_o,
   output logic        mem_we_o,
-  output logic [31:0] mem_wd_o
+  output logic [31:0] mem_wd_o,
+  output logic        irq_ret_o
 );
+  
   //PC
   logic [31:0] PC;
 
@@ -70,12 +73,34 @@ module processor_core (
   logic         flag;
   logic [31:0]  result;
 
+  //trap
+  logic trap;
+  assign trap = irq | illegal_instr;
+
+  //irq
+  logic [31:0] irq_cause;
+  logic        irq;
+
+  //csr
+  logic [31:0] mcause;
+  logic [31:0] mie;
+  logic [31:0] csr_wd;
+  logic [31:0] mepc;
+  logic [31:0] mtvec;
+  assign mcause = (illegal_instr) ? (32'h0000_0002) : irq_cause;
+
   // register assign
-  assign write_enable = gpr_we & !stall_i;
+  assign write_enable = gpr_we & ~(stall_i | trap);
   assign read_addr1   = instr_i[19:15];
   assign read_addr2   = instr_i[24:20];
   assign write_addr   = instr_i[11: 7];
-  assign write_data   = (wb_sel)? mem_rd_i : result;
+  always_comb begin 
+    case (wb_sel)
+      'd0: write_data = result;
+      'd1: write_data = mem_rd_i;
+      'd2: write_data = csr_wd;
+    endcase
+  end
 
   //PC Realisation
   logic [12:0] imm_b;
@@ -86,20 +111,34 @@ module processor_core (
     if(rst_i) begin
       PC <= 0;
     end
-    else if(!stall_i) begin
-      case(jalr)
+    else if(!stall_i | trap) begin
+      case(mret)
         0: begin
-          case(jal | (flag & branch))
+          case(trap)
             0: begin
-              PC <= PC + 4;
+              case(jalr)
+                0: begin
+                  case(jal | (flag & branch))
+                    0: begin
+                      PC <= PC + 4;
+                    end
+                    1: begin
+                      PC <= PC + ((branch)? $signed(imm_b) : $signed(imm_j));
+                    end
+                  endcase
+                end
+                1: begin
+                  PC <= read_data1 + $signed(instr_i[31:20]);
+                end
+              endcase
             end
             1: begin
-              PC <= PC + ((branch)? $signed(imm_b) : $signed(imm_j));
+              PC <= mtvec;
             end
           endcase
         end
         1: begin
-          PC <= read_data1 + $signed(instr_i[31:20]);
+          PC <= mepc;
         end
       endcase
     end
@@ -162,10 +201,44 @@ module processor_core (
     .flag_o  (flag  ),
     .result_o(result)
   );
+  
+  interrupt_controller irq_controller(
+    .clk_i      (clk_i        ),
+    .rst_i      (rst_i        ),
+    .exception_i(illegal_instr),
+    .irq_req_i  (irq_req_i    ),
+    .mie_i      (mie[16]      ),
+    .mret_i     (mret         ),
+
+    .irq_ret_o  (irq_ret_o),
+    .irq_cause_o(irq_cause),
+    .irq_o      (irq      )
+  ); 
+  logic [31:0] imm_Z;
+  assign imm_Z = {27'b0, instr_i[19:15]};
+  csr_controller csr(
+    .clk_i (clk_i),
+    .rst_i (rst_i),
+    .trap_i(trap ),
+
+    .opcode_i(csr_op),
+
+    .addr_i        (instr_i[31:20]),
+    .pc_i          (PC            ),
+    .mcause_i      (mcause        ),
+    .rs1_data_i    (read_data1    ),
+    .imm_data_i    (imm_Z         ),
+    .write_enable_i(csr_we        ),
+
+    .read_data_o(csr_wd),
+    .mie_o      (mie   ),
+    .mepc_o     (mepc  ),
+    .mtvec_o    (mtvec )
+  );
 
   assign mem_size_o   = mem_size;
-  assign mem_req_o    = mem_req;
-  assign mem_we_o     = mem_we;
+  assign mem_req_o    = mem_req & ~trap;
+  assign mem_we_o     = mem_we & ~trap;
   assign mem_addr_o   = result;
   assign instr_addr_o = PC;
   assign mem_wd_o     = read_data2;
