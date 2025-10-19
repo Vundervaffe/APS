@@ -27,7 +27,7 @@ module processor_core (
   input  logic        stall_i,
   input  logic [31:0] instr_i,
   input  logic [31:0] mem_rd_i,
-  input  logic        irq_req_i,
+  input  logic [15:0] irq_req_i,
 
   output logic [31:0] instr_addr_o,
   output logic [31:0] mem_addr_o,
@@ -35,7 +35,7 @@ module processor_core (
   output logic        mem_req_o,
   output logic        mem_we_o,
   output logic [31:0] mem_wd_o,
-  output logic        irq_ret_o
+  output logic [15:0] irq_ret_o
 );
   
   //PC
@@ -207,7 +207,7 @@ module processor_core (
     .rst_i      (rst_i        ),
     .exception_i(illegal_instr),
     .irq_req_i  (irq_req_i    ),
-    .mie_i      (mie[16]      ),
+    .mie_i      (mie[31:16]   ),
     .mret_i     (mret         ),
 
     .irq_ret_o  (irq_ret_o),

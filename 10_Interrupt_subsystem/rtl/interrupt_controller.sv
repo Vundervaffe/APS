@@ -24,15 +24,14 @@ module interrupt_controller(
   input  logic        clk_i,
   input  logic        rst_i,
   input  logic        exception_i,
-  input  logic        irq_req_i,
-  input  logic        mie_i,
+  input  logic [15:0] irq_req_i,
+  input  logic [15:0] mie_i,
   input  logic        mret_i,
 
-  output logic        irq_ret_o,
+  output logic [15:0] irq_ret_o,
   output logic [31:0] irq_cause_o,
   output logic        irq_o
   );
-  assign irq_cause_o = 32'h8000_0010;
 
   logic exc_h;
   logic irc_h;
@@ -51,6 +50,24 @@ module interrupt_controller(
       irc_h <= (irq_o | irc_h) & ~(~(exception_i | exc_h) & mret_i);
   end
 
-  assign irq_o     = (irq_req_i & mie_i) & ~(irc_h | (exception_i | exc_h));
-  assign irq_ret_o = ~(exception_i | exc_h) & mret_i;
+  logic        irq_ret;
+  logic        ready;
+  logic [15:0] masked_irq;
+
+  assign irq_ret    = ~(exception_i | exc_h) & mret_i;
+  assign ready      = ~(irc_h | (exception_i | exc_h));
+  assign masked_irq =  irq_req_i & mie_i;
+
+  daisy_chain DC(
+    .clk_i(clk_i),
+    .rst_i(rst_i),
+    
+    .masked_irq_i(masked_irq),
+    .irq_ret_i   (irq_ret   ),
+    .ready_i     (ready     ),
+    
+    .irq_ret_o  (irq_ret_o  ),
+    .irq_cause_o(irq_cause_o),
+    .irq_o      (irq_o      )
+  );
 endmodule

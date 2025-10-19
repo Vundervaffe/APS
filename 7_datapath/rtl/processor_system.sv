@@ -44,6 +44,8 @@ module processor_system(
   output logic        vga_hs_o,   // Линия горизонтальной синхронизации vga
   output logic        vga_vs_o    // Линия вертикальной синхронизации vga
 );
+
+  logic         req;
   //Instruction Memory
   logic [31:0] instr;
   logic [31:0] instr_addr;
@@ -52,6 +54,11 @@ module processor_system(
   logic stall;
   logic ready;
 
+  //Data Keyboard
+  logic [31:0] key_rd;
+  logic        irq_request_from_ps2;
+  logic        irq_return_to_ps2;
+
   //Core
   logic [31: 0] core_rd;
   logic         core_req;
@@ -59,16 +66,27 @@ module processor_system(
   logic [ 2: 0] core_size;
   logic [31: 0] core_wd;
   logic [31: 0] core_addr;
-  logic irq_req;
-  logic irq_ret;
+  logic [15: 0] irq_req;
+  logic [15: 0] irq_ret;
+
+  assign irq_req[0]        = irq_request_from_ps2;
+  assign irq_return_to_ps2 = irq_ret[0];
+
+  //LSU
+  logic [31: 0] rd;
 
   //Data mem
   logic [31: 0] mem_rd;
-  logic         mem_req;
   logic         mem_we;
   logic [ 3: 0] mem_be;
   logic [31: 0] mem_wd;
   logic [31: 0] mem_addr;
+
+  //Data VGA
+  logic [31:0] VGA_rd;
+
+  logic sysclk, rst_i;
+sys_clk_rst_gen divider(.ex_clk_i(clk_i),.ex_areset_n_i(resetn_i),.div_i(5),.sys_clk_o(sysclk), .sys_reset_o(rst_i));
 
   instr_mem Instruction_Memory(
     .read_addr_i(instr_addr),
@@ -76,8 +94,8 @@ module processor_system(
   );
 
   processor_core core(
-    .clk_i       (clk_i     ),
-    .rst_i       (rst_i     ),
+    .clk_i       (sysclk),
+    .rst_i       (rst_i),
 
     .stall_i     (stall     ),
     .instr_i     (instr     ),
@@ -94,7 +112,7 @@ module processor_system(
   );
 
   lsu LSU(
-    .clk_i(clk_i),
+    .clk_i(sysclk),
     .rst_i(rst_i),
 
     // Интерфейс с ядром
@@ -107,23 +125,68 @@ module processor_system(
     .core_stall_o(stall    ),
 
     // Интерфейс с памятью
-    .mem_req_o  (mem_req ),
+    .mem_req_o  (req     ),
     .mem_we_o   (mem_we  ),
     .mem_be_o   (mem_be  ),
     .mem_addr_o (mem_addr),
     .mem_wd_o   (mem_wd  ),
-    .mem_rd_i   (mem_rd  ),
+    .mem_rd_i   (rd      ),
     .mem_ready_i(ready   )
   );
-
+  logic [255:0] OneHot_code;
+  always_comb begin
+    OneHot_code = 256'b1 << mem_addr[31:24];
+  end
   data_mem Data_Memory(
-    .clk_i         (clk_i   ),
-    .mem_req_i     (mem_req ),
-    .write_enable_i(mem_we  ),
-    .byte_enable_i (mem_be  ),
-    .addr_i        (mem_addr),
-    .write_data_i  (mem_wd  ),
-    .read_data_o   (mem_rd  ),
-    .ready_o       (ready   )
+    .clk_i         (sysclk                     ),
+    .mem_req_i     (req & (OneHot_code[0] == 0)),
+    .write_enable_i(mem_we                     ),
+    .byte_enable_i (mem_be                     ),
+    .addr_i        ({0, mem_addr[23:0]}        ),
+    .write_data_i  (mem_wd                     ),
+    .read_data_o   (mem_rd                     ),
+    .ready_o       (ready                      )
   );
+
+  ps2_sb_ctrl PS2_ctrl(
+    .clk_i         (sysclk                     ),
+    .rst_i         (rst_i                      ),
+    .addr_i        ({0, mem_addr[23:0]}        ),
+    .req_i         (req & (OneHot_code[0] == 3)),
+    .write_data_i  (mem_wd                     ),
+    .write_enable_i(mem_we                     ),
+    .read_data_o   (key_rd                     ),
+
+    .interrupt_request_o(irq_request_from_ps2),
+    .interrupt_return_i (irq_return_to_ps2   ),
+
+    .kclk_i (kclk_i ),
+    .kdata_i(kdata_i)
+  );
+  assign led_o = key_rd;
+  vga_sb_ctrl VGA_ctrl(
+    .clk_i         (sysclk),
+    .rst_i         (rst_i),
+    .clk100m_i     (clk_i),
+    .req_i         (req & (OneHot_code[0] == 7)),
+    .write_enable_i(mem_we),
+    .mem_be_i      (mem_be),
+    .addr_i        ({0, mem_addr[23:0]}),
+    .write_data_i  (key_rd),
+    .read_data_o   (VGA_rd),
+
+    .vga_r_o (vga_r_o ),
+    .vga_g_o (vga_g_o ),
+    .vga_b_o (vga_b_o ),
+    .vga_hs_o(vga_hs_o),
+    .vga_vs_o(vga_vs_o)
+  );
+  
+  always_comb begin
+    case (mem_addr[31:24])
+      8'h00: rd = mem_rd;
+      8'h03: rd = key_rd;
+      8'h07: rd = VGA_rd;
+    endcase
+  end
 endmodule
