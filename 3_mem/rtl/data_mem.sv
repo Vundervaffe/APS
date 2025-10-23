@@ -51,7 +51,7 @@ import memory_pkg::DATA_MEM_SIZE_WORDS;
         data[addr_i] <= write_data;
       end
       else begin
-        read_data_o <= data[addr_i];
+        read_data_o <= data[addr_i[$clog2(DATA_MEM_SIZE_WORDS)-1:2]];
       end
     end
   end
