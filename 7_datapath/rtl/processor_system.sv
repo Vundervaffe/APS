@@ -139,7 +139,7 @@ sys_clk_rst_gen divider(.ex_clk_i(clk_i),.ex_areset_n_i(resetn_i),.div_i(5),.sys
   end
   data_mem Data_Memory(
     .clk_i         (sysclk                     ),
-    .mem_req_i     (req & (OneHot_code[0] == 0)),
+    .mem_req_i     (req OneHot_code[0]),
     .write_enable_i(mem_we                     ),
     .byte_enable_i (mem_be                     ),
     .addr_i        ({0, mem_addr[23:0]}        ),
@@ -152,7 +152,7 @@ sys_clk_rst_gen divider(.ex_clk_i(clk_i),.ex_areset_n_i(resetn_i),.div_i(5),.sys
     .clk_i         (sysclk                     ),
     .rst_i         (rst_i                      ),
     .addr_i        ({0, mem_addr[23:0]}        ),
-    .req_i         (req & (OneHot_code[0] == 3)),
+    .req_i         (req & OneHot_code[3]       ),
     .write_data_i  (mem_wd                     ),
     .write_enable_i(mem_we                     ),
     .read_data_o   (key_rd                     ),
@@ -168,11 +168,11 @@ sys_clk_rst_gen divider(.ex_clk_i(clk_i),.ex_areset_n_i(resetn_i),.div_i(5),.sys
     .clk_i         (sysclk),
     .rst_i         (rst_i),
     .clk100m_i     (clk_i),
-    .req_i         (req & (OneHot_code[0] == 7)),
+    .req_i         (req & OneHot_code[7]),
     .write_enable_i(mem_we),
     .mem_be_i      (mem_be),
     .addr_i        ({0, mem_addr[23:0]}),
-    .write_data_i  (key_rd),
+    .write_data_i  (mem_wd),
     .read_data_o   (VGA_rd),
 
     .vga_r_o (vga_r_o ),
